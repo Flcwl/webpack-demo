@@ -1,4 +1,11 @@
 body {
   background-color: antiquewhite;
   color: dodgerblue;
+  animation: .3s;
+}
+
+.unused {
+  background: #ddd;
+  color: #000;
+  font-size: 2rem;
 }

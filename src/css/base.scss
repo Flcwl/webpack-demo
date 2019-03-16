@@ -1,0 +1,15 @@
+$nav-color: #FFF;
+
+.nav {
+  $width: 100%;
+  width: $width;
+  height:30px;
+  background-color: $nav-color;
+  animation: .3s;
+}
+
+.unused {
+  background: #ddd;
+  color: #000;
+  font-size: 2rem;
+}

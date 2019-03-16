@@ -3,6 +3,7 @@ import _ from 'lodash';
 import './css/index.css';
 import './css/style.css';
 import less from './css/base.less';
+import sass from './css/base.scss';
 
 import Fens from './img/fens.jpg';
 

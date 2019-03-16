@@ -2,6 +2,13 @@ const path = require('path');
 const UglifyJsPlugin = require('uglifyjs-webpack-plugin');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
 const MiniCssExtractPlugin = require("mini-css-extract-plugin");
+const glob = require('glob');
+const PurgecssPlugin = require('purgecss-webpack-plugin');
+const CleanWebpackPlugin = require('clean-webpack-plugin');
+
+const PATHS = {
+  src: path.join(__dirname, 'src')
+}
 
 module.exports = {
   mode: 'development',
@@ -31,24 +38,30 @@ module.exports = {
       {
         test: /\.css$/,
         use: [
-          {
-            loader: MiniCssExtractPlugin.loader,
-            options: {
-              // you can specify a publicPath here
-              // by default it use publicPath in webpackOptions.output
-              publicPath: path.resolve(__dirname, 'dist')
-            }
-          },
+          // 与`MiniCssExtractPlugin`作用冲突
+          'style-loader',
+          // {
+          //   loader: MiniCssExtractPlugin.loader,
+          //   options: {
+          //     // you can specify a publicPath here
+          //     // by default it use publicPath in webpackOptions.output
+          //     publicPath: path.resolve(__dirname, 'dist')
+          //   }
+          // },
+          // When postcss-loader is used standalone (without css-loader) don't use @import in your CSS, 
+          // since this can lead to quite bloated bundles
+          { loader: 'css-loader', options: { importLoaders: 1 } },
           // 缩写法
-          'css-loader',
-          // 与`MiniCssExtractPlugin`冲突
-          // 'style-loader'
+          'postcss-loader'
         ]
       },
       {
         test: /\.less$/,
         use: [
           // 必须写在第一个
+          // {
+          //   loader: 'style-loader' // creates style nodes from JS strings
+          // }, 
           {
             // 默认打包抽离统一到一个文件
             loader: MiniCssExtractPlugin.loader,
@@ -58,15 +71,34 @@ module.exports = {
               publicPath: path.resolve(__dirname, 'dist')
             }
           },
-          // {
-          //   loader: 'style-loader' // creates style nodes from JS strings
-          // }, 
           {
             loader: 'css-loader' // translates CSS into CommonJS
           }, 
           {
             loader: 'less-loader' // compiles Less to CSS
-          }
+          },
+          'postcss-loader'
+        ]
+      },
+      {
+        test: /\.scss$/,
+        use: [
+          // {
+          //   loader: "style-loader"
+          // }, 
+          {
+            loader: MiniCssExtractPlugin.loader,
+            options: {
+              publicPath: path.resolve(__dirname, 'dist')
+            }
+          },
+          {
+            loader: "css-loader"
+          }, 
+          {
+            loader: "sass-loader"
+          },
+          'postcss-loader'
         ]
       },
       {
@@ -99,17 +131,34 @@ module.exports = {
       // both options are optional
       filename: "[name].[hash].css",
       chunkFilename: "[id].[hash].css"
-    })
+    }),
+    // 移除未使用css代码
+    new PurgecssPlugin({
+      paths: glob.sync(`${PATHS.src}/**/*`,  { nodir: true }),
+    }),
+    // 每次打包前清空dist文件夹（webpack4 default `<PROJECT_DIR>/dist/` will be removed.）
+    new CleanWebpackPlugin()
   ],
 
   optimization: {
     minimizer: [
+      // 生产模式其实会自动压缩代码（webpack4）
       new UglifyJsPlugin({
         cache: true,
         parallel: true,
         sourceMap: true // set to true if you want JS source maps
       })
     ],
+    splitChunks: {
+      cacheGroups: {
+        styles: {
+          name: 'styles',
+          test: /\.css$/,
+          chunks: 'all',
+          enforce: true
+        }
+      }
+    }
   },
 
   //配置webpack开发服务功能
