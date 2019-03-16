@@ -1,3 +1,4 @@
+// 在webpack.config.js里引入必须使用`require`，否则会报错
 const path = require('path');
 const UglifyJsPlugin = require('uglifyjs-webpack-plugin');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
@@ -5,13 +6,22 @@ const MiniCssExtractPlugin = require("mini-css-extract-plugin");
 const glob = require('glob');
 const PurgecssPlugin = require('purgecss-webpack-plugin');
 const CleanWebpackPlugin = require('clean-webpack-plugin');
+const webpack = require('webpack');
+const CopyPlugin = require('copy-webpack-plugin');
 
 const PATHS = {
   src: path.join(__dirname, 'src')
 }
 
+if (process.env.type == "build") {
+  // npm set type值
+  console.log((process.env.type));
+}
+
 module.exports = {
+  // https://webpack.js.org/concepts/mode#usage
   mode: 'development',
+  // https://webpack.js.org/configuration/devtool
   devtool: 'inline-source-map',
 
   // entry: './src/index.js',
@@ -110,6 +120,19 @@ module.exports = {
             outputPath: 'images/'
           }
         }]
+      },
+      {
+        test: /\.(jsx|js)$/,
+        exclude: /node_modules/,
+        use: {
+          loader: 'babel-loader',
+          // options: {
+          //   presets: [
+          //     '@babel/preset-env',
+          //     '@babel/preset-react'
+          //   ]
+          // }
+        }
       }
     ]
   },
@@ -137,7 +160,20 @@ module.exports = {
       paths: glob.sync(`${PATHS.src}/**/*`,  { nodir: true }),
     }),
     // 每次打包前清空dist文件夹（webpack4 default `<PROJECT_DIR>/dist/` will be removed.）
-    new CleanWebpackPlugin()
+    new CleanWebpackPlugin(),
+    // 使用第三方库
+    new webpack.ProvidePlugin({
+      $: "jquery"
+    }),
+    // 代码版权申明(打包后文件统一顶部注释)
+    new webpack.BannerPlugin('Flcwl 学习`webpack4.0`小Demo，欢迎参考学习。'),
+    new CopyPlugin([
+      {
+        from: path.resolve(__dirname, 'src/doc'),
+        // 跟随`output`配置的目录
+        to: './doc'
+      },
+    ]),
   ],
 
   optimization: {
@@ -151,11 +187,18 @@ module.exports = {
     ],
     splitChunks: {
       cacheGroups: {
+        // 抽离放在`style`标签内的css代码
         styles: {
           name: 'styles',
           test: /\.css$/,
           chunks: 'all',
           enforce: true
+        },
+        // 抽离jQuery三方库
+        jquery: {
+          test: /[\\/]node_modules[\\/]jquery[\\/]/,
+          name: 'jquery',
+          chunks: 'all',
         }
       }
     }
@@ -165,6 +208,14 @@ module.exports = {
   devServer: {
     contentBase: path.join(__dirname, 'dist'),
     compress: true,
-    port: 9000
+    port: 9000,
+    watchOptions: {
+      //检测修改的时间，以毫秒为单位
+      poll: 1000, 
+      //防止重复保存而发生重复编译错误。这里设置的500指半秒内重复保存，不进行打包操作
+      aggregateTimeout: 500, 
+      //不监听的目录
+      ignored: /node_modules/,
+    }
   }
 };
